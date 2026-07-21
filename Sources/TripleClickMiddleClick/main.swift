@@ -1,7 +1,17 @@
 import AppKit
+import ApplicationServices
 
 let app = NSApplication.shared
 app.setActivationPolicy(.accessory)
+
+// Posting synthetic mouse events requires Accessibility permission. Prompt for
+// it on launch so the app appears in System Settings → Privacy & Security →
+// Accessibility (and the user gets the standard "grant access" dialog).
+let promptKey = kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String
+let trusted = AXIsProcessTrustedWithOptions([promptKey: true] as CFDictionary)
+if !trusted {
+    FileHandle.standardError.write(Data("TCMC: not yet trusted for Accessibility — grant access in System Settings, then relaunch.\n".utf8))
+}
 
 var statusItem: NSStatusItem?
 
