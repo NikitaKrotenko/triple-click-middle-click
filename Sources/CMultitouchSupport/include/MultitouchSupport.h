@@ -11,6 +11,10 @@
 typedef struct { float x, y; } MTPoint;
 typedef struct { MTPoint position, velocity; } MTVector;
 
+// The full 96-byte layout matters: the framework passes an array of these,
+// and the C struct size is the stride between fingers. A truncated struct
+// reads finger #0 correctly but lands fingers #1/#2 at the wrong offset,
+// yielding garbage positions.
 typedef struct {
     int32_t frame;
     double timestamp;
@@ -18,11 +22,19 @@ typedef struct {
     int32_t state;      // 4 = touching, 1 = starting, 7 = ending, etc.
     int32_t fingerId;
     int32_t handId;
-    MTVector normalizedVector;
-    float zTotal;
+    MTVector normalizedVector;   // normalized (0..1) position + velocity
+    float zTotal;                // total capacitance / "size"
     int32_t unused2;
+    float angle;
+    float majorAxis;
+    float minorAxis;
+    MTVector absoluteVector;     // absolute (mm) position + velocity
+    int32_t unused3;
+    int32_t unused4;
     float zDensity;
 } MTTouch;
+
+_Static_assert(sizeof(MTTouch) == 96, "MTTouch must be 96 bytes to match the framework's array stride");
 
 typedef void *MTDeviceRef;
 

@@ -10,8 +10,8 @@ final class TouchMonitor {
     private let onTripleTap: () -> Void
 
     private let requiredFingerCount = 3
-    private let maxTapDuration: Double = 0.35
-    private let maxMovement: Float = 0.06
+    private let maxTapDuration: Double = 0.6
+    private let maxMovement: Float = 0.08
 
     /// A gesture spans from the first finger touching down until all fingers
     /// have lifted (a frame with 0 fingers). We don't evaluate anything until
