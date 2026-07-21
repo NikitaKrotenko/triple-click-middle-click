@@ -82,6 +82,13 @@ final class TouchMonitor {
             }
             gestureMaxFingers = max(gestureMaxFingers, fingerCount)
 
+            // Keep the left-click suppression window open while (and briefly
+            // after) three fingers are down, so macOS's own click for this
+            // gesture gets swallowed regardless of when it fires.
+            if fingerCount >= requiredFingerCount {
+                GestureState.shared.markThreeFinger()
+            }
+
             for touch in buffer {
                 let pos = touch.normalizedVector.position
                 if let start = startPositions[touch.identifier] {
@@ -101,6 +108,8 @@ final class TouchMonitor {
                     && gestureMaxMovement <= maxMovement
                 log("release: maxFingers=\(gestureMaxFingers) duration=\(String(format: "%.3f", duration)) movement=\(String(format: "%.4f", gestureMaxMovement)) -> \(isTap ? "TAP" : "ignored")")
                 if isTap {
+                    // Extend suppression across the release, then fire.
+                    GestureState.shared.markThreeFinger()
                     onTripleTap()
                 }
             }

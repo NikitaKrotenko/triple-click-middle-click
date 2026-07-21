@@ -9,6 +9,7 @@ app.setActivationPolicy(.accessory)
 // Accessibility (and the user gets the standard "grant access" dialog).
 let promptKey = kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String
 let trusted = AXIsProcessTrustedWithOptions([promptKey: true] as CFDictionary)
+Log.write("app launched — accessibility trusted=\(trusted)")
 if !trusted {
     FileHandle.standardError.write(Data("TCMC: not yet trusted for Accessibility — grant access in System Settings, then relaunch.\n".utf8))
 }
@@ -27,6 +28,19 @@ func makeStatusItem() -> NSStatusItem {
 }
 
 statusItem = makeStatusItem()
+
+// The event tap needs Accessibility, which may not be granted at first launch.
+// Try now, and if it fails, keep retrying so it starts as soon as the user
+// grants access — no relaunch required.
+if !LeftClickSuppressor.start() {
+    var attempts = 0
+    Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { timer in
+        attempts += 1
+        if LeftClickSuppressor.start() || attempts > 120 {
+            timer.invalidate()
+        }
+    }
+}
 
 let monitor = TouchMonitor {
     MiddleClickPoster.post()
