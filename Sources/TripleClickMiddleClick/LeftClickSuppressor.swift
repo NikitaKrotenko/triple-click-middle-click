@@ -5,6 +5,10 @@ import Foundation
 /// happen during (or just after) a three-finger tap, so the gesture doesn't
 /// also register as a normal click. Requires Accessibility permission — the
 /// same grant the app already needs to post the middle click.
+///
+/// The tap callback is kept minimal (no I/O): macOS silently disables an event
+/// tap whose callback is too slow, so the hot path just checks a flag. A
+/// watchdog timer re-enables the tap if the system ever disables it.
 enum LeftClickSuppressor {
     /// Returns true once the event tap is installed. Safe to call repeatedly:
     /// it no-ops if already installed, and fails quietly (returning false) if
@@ -25,8 +29,7 @@ enum LeftClickSuppressor {
                 return Unmanaged.passUnretained(event)
             }
             if GestureState.shared.shouldSuppressLeftClick() {
-                Log.write("suppressed \(type == .leftMouseDown ? "leftMouseDown" : "leftMouseUp")")
-                return nil // swallow the event
+                return nil // swallow the event; keep this path allocation/IO free
             }
             return Unmanaged.passUnretained(event)
         }
@@ -46,9 +49,24 @@ enum LeftClickSuppressor {
         let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
         CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
         CGEvent.tapEnable(tap: tap, enable: true)
+        startWatchdog()
         Log.write("LeftClickSuppressor: event tap installed")
         return true
     }
 
+    /// Periodically re-enable the tap if macOS disabled it (e.g. after a
+    /// momentary slowdown), so suppression never silently stays off.
+    private static func startWatchdog() {
+        watchdog?.invalidate()
+        watchdog = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { _ in
+            guard let tap = LeftClickSuppressor.tap else { return }
+            if !CGEvent.tapIsEnabled(tap: tap) {
+                CGEvent.tapEnable(tap: tap, enable: true)
+                Log.write("LeftClickSuppressor: watchdog re-enabled the tap")
+            }
+        }
+    }
+
     private static var tap: CFMachPort?
+    private static var watchdog: Timer?
 }
