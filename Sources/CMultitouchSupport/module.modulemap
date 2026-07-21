@@ -1,0 +1,4 @@
+module CMultitouchSupport {
+    header "include/MultitouchSupport.h"
+    export *
+}
