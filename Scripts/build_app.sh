@@ -41,5 +41,9 @@ cat > "$APP_BUNDLE/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 
+# Ad-hoc code signature so macOS treats the bundle as a stable identity for
+# the Accessibility (TCC) permission grant.
+codesign --force --deep --sign - "$APP_BUNDLE"
+
 echo "Done: $APP_BUNDLE"
 echo "Drag it to /Applications, then launch it and grant Accessibility permission when prompted."
